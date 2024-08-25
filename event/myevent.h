@@ -40,7 +40,7 @@ protected:
 
     // 保存文件描述符对应的发送数据的状态，一次proces中非阻塞的写数据可能无法将数据全部传过去，所以保存当前数据发送的状态，可以继续传递数据
     static std::unordered_map<int, Response> responseStatus;
-
+    std::string file_path = "/home/orangepi/code/alarm/mp3";
 public:
     // 不同类型事件中重写该函数，执行不同的处理方法
     virtual void process(){

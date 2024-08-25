@@ -6,6 +6,7 @@ std::unordered_map<int, Response> EventBase::responseStatus;
 
 
 
+
 void AcceptConn::process(){
     // 接受连接
     clientAddrLen = sizeof(clientAddr);
@@ -191,7 +192,7 @@ void HandleRecv::process(){
                     // 循环检索是否有 \r\n ，将 \r\n 之前的内容全部保存。如果存在\r\n，根据后面的内容判断是否到达文件边界
                     if(requestStatus[m_clientFd].fileMsgStatus == FILE_CONTENT){
                         // 首先以二进制追加的方式打开文件
-                        std::ofstream ofs("filedir/" + requestStatus[m_clientFd].recvFileName, std::ios::out | std::ios::app | std::ios::binary);
+                        std::ofstream ofs(file_path + '/' + requestStatus[m_clientFd].recvFileName, std::ios::out | std::ios::app | std::ios::binary);
                         if(!ofs){
                             std::cout << outHead("error") << "客户端 " << m_clientFd << " 的 POST 请求体所需要保存的文件打开失败，正在重新打开文件..." << std::endl;
                             break;
@@ -333,7 +334,7 @@ void HandleSend::process(){
             responseStatus[m_clientFd].beforeBodyMsg = getStatusLine("HTTP/1.1", "200", "OK");
 
             // 先创建响应体对应的数据
-            // 函数中先获取 /filedir 文件夹中的所有文件，然后根据 filelist.html 的页面结构，所有文件项加入页面，最终的HTML页面以字符串形式保存到 msgBody 中
+            // 函数中先获取 /file_path 文件夹中的所有文件，然后根据 filelist.html 的页面结构，所有文件项加入页面，最终的HTML页面以字符串形式保存到 msgBody 中
             getFileListPage(responseStatus[m_clientFd].msgBody);
             // 记录页面的字节个数，即消息体长度
             responseStatus[m_clientFd].msgBodyLen = responseStatus[m_clientFd].msgBody.size();
@@ -361,7 +362,7 @@ void HandleSend::process(){
 
             // 先创建响应体对应的数据
             // 获取所传递文件的描述符
-            responseStatus[m_clientFd].fileMsgFd = open(("filedir/" + filename).c_str(), O_RDONLY);
+            responseStatus[m_clientFd].fileMsgFd = open((file_path +'/' + filename).c_str(), O_RDONLY);
             if(responseStatus[m_clientFd].fileMsgFd == -1){                  // 文件打开失败时，退出当前函数（避免下面关闭文件造成错误），并重置写事件，在下次进入时回复重定向报文
                 std::cout << outHead("error") << "客户端 " << m_clientFd << " 的请求消息要下载文件 " << filename << " ，但是文件打开失败，退出当前函数，重新进入用于返回重定向报文，重定向到文件列表" << std::endl;
                 responseStatus[m_clientFd] = Response();                     // 重置 Response
@@ -393,7 +394,7 @@ void HandleSend::process(){
 
         }else if(opera == "delete"){        // 删除文件
             // 在本地删除文件
-            int ret = remove(("filedir/" + filename).c_str());
+            int ret = remove((file_path + "/" + filename).c_str());
             if(ret != 0){
                 std::cout << outHead("error") << "客户端 " << m_clientFd << " 的请求消息要删除文件 " << filename << " 但是文件删除失败" << std::endl;
             }else{
@@ -584,7 +585,7 @@ void HandleSend::getFileListPage(std::string &fileListHtml){
 
     // 将指定目录内的所有文件保存到 fileVec 中
     std::vector<std::string> fileVec;
-    getFileVec("filedir", fileVec);
+    getFileVec(file_path, fileVec);
     
     // 构建页面
     std::ifstream fileListStream("html/filelist.html", std::ios::in);
